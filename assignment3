@@ -1,0 +1,164 @@
+class Node:
+    def __init__(self, data):
+        self.data = data
+        self.next = None
+        self.prev = None
+    def __repr__(self):
+        return str(self.data)
+
+class DoublyLinkedList:
+    def __init__(self):
+        self.head = None
+        self.tail = None
+        self.size = 0
+
+    def isempty(self):
+        return self.size == 0
+
+    def enqueue_back(self, data):
+        new_node = Node(data)
+        if self.head is None:
+            self.head = new_node
+            self.tail = new_node
+        else:
+            self.tail.next = new_node
+            new_node.prev = self.tail
+            self.tail = new_node
+        self.size += 1
+
+    def enqueue_front(self, data):
+        new_node = Node(data)
+        if self.head is None:
+            self.head = new_node
+            self.tail = new_node
+        else:
+            self.head.prev = new_node
+            new_node.next = self.head
+            self.head = new_node
+        self.size += 1
+
+    def dequeue_back(self):
+        if self.isempty():
+            print("NOTHING TO DEQUEUE")
+        self.size -= 1
+        if self.tail == self.head:
+            element = self.head
+            self.tail = None
+            self.head = None
+            return element
+        else:
+            element = self.tail.data
+            self.tail.prev.next = None
+            self.tail = self.tail.prev
+            return element
+
+
+    def dequeue_front(self):
+        if self.isempty():
+            print("NOTHING TO DEQUEUE")
+        self.size -= 1
+        if self.tail == self.head:
+            element = self.head
+            self.tail = None
+            self.head = None
+            return element
+        else:
+            element = self.head.data
+            self.head.next.prev= None
+            self.head = self.head.next
+            return element
+
+    def insert(self, previous, data):
+        new_node = Node(data)
+        new_node.next = previous.next
+        previous.next = new_node
+        new_node.prev = previous
+        if new_node.next is not None:
+            new_node.next.prev = new_node
+        self.size += 1
+
+    def __len__(self):
+        return self.size
+
+    def __repr__(self):
+        if self.isempty():
+            print("THIS STRUCTURE IS EMPTY!!!!!!")
+        nodes = []
+        current = self.head
+        while current:
+            nodes.append(str(current.data))
+            current = current.next
+        return  ' '.join(nodes)
+
+"""DEQUE IMPLEMENTATION"""
+class Deque:
+    def __init__(self):
+        self.list = DoublyLinkedList()
+    def enqueue_front(self, e):
+        self.list.enqueue_front(e)
+    def enqueue_back(self, e):
+        self.list.enqueue_back(e)
+    def dequeue_front(self):
+        return self.list.dequeue_front()
+    def dequeue_back(self):
+        return self.list.dequeue_back()
+    def is_empty(self):
+        return self.list.size == 0
+    def __repr__(self):
+        return self.list.__repr__()
+    def __len__(self):
+        return self.list.size
+
+"""STACK IMPLEMENTATION AS A DEQUE"""
+class Stack:
+    def __init__(self):
+        self.list = Deque()
+    def push(self, e):
+        self.list.enqueue_front(e)
+    def pop(self):
+        return self.list.dequeue_front()
+    def peek(self):
+        return self.list.list.head.data
+    def is_empty(self):
+        return self.list.list.size == 0
+    def __repr__(self):
+        return self.list.__repr__()
+    def __len__(self):
+        return self.list.list.size
+
+""""QUEUE IMPLEMENTATION AS A DEQUE"""
+class Queue:
+    def __init__(self):
+        self.list = Deque()
+    def enqueue(self, e):
+        self.list.enqueue_back(e)
+    def dequeue(self):
+        return self.list.dequeue_front()
+    def is_empty(self):
+        return self.list.list.size == 0
+    def __repr__(self):
+        return self.list.__repr__()
+    def __len__(self):
+        return self.list.list.size
+
+
+"""REVERSING A STACK USING A QUEUE"""
+def ReverseFunc(stack):
+    reverser = Queue()
+    for x in range(len(stack)):
+        reverser.enqueue(stack.pop())
+    for x in range(len(reverser)):
+        stack.push(reverser.dequeue())
+    return stack
+
+
+if __name__ == "__main__":
+    stacky = Stack()
+    stacky.push(1)
+    stacky.push(2)
+    stacky.push(3)
+    stacky.push(4)
+    stacky.push(5)
+    reversal = Queue()
+    print("ORIGINAL:", stacky)
+    print("REVERSED:", ReverseFunc(stacky))
