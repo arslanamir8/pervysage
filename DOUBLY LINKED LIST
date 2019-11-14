@@ -150,15 +150,3 @@ def ReverseFunc(stack):
     for x in range(len(reverser)):
         stack.push(reverser.dequeue())
     return stack
-
-
-if __name__ == "__main__":
-    stacky = Stack()
-    stacky.push(1)
-    stacky.push(2)
-    stacky.push(3)
-    stacky.push(4)
-    stacky.push(5)
-    reversal = Queue()
-    print("ORIGINAL:", stacky)
-    print("REVERSED:", ReverseFunc(stacky))
