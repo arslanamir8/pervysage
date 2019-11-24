@@ -1,3 +1,5 @@
+#!/bin/python3
+
 """LINK BASED BINARY TREE"""
 class BinaryTreeNode:
     def __init__(self, key=None, value=None):
