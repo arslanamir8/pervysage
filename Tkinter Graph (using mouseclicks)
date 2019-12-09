@@ -1,0 +1,74 @@
+#!/bin/python3
+
+from tkinter import *
+
+#varaibles and data
+radius = 20
+nodecount = []
+coords = {}
+graph = {}
+start = None
+node1 = None
+node2 = None
+
+#functions
+def DrawNode(event):
+    canvas.create_oval(event.x - radius, event.y - radius, event.x + radius, event.y + radius, outline="#000", width=1)
+    x = len(nodecount)
+    canvas.create_text(event.x, event.y, font="Times 30 bold", text=x)
+    nodecount.append(x)
+    coords[len(nodecount)-1] = (event.x, event.y)
+    graph[len(nodecount)-1] = []
+
+def line_click(event):
+    global start, node1
+    for k, v in coords.items():
+        if coords[k][0] - radius < event.x < coords[k][0] + radius and coords[k][1] - radius < event.y < coords[k][1] \
+                + radius:
+            start = (event.x, event.y)
+            node1 = k
+
+def line_release(event):
+    global start, node2, node1
+    if start:
+        for k, v in coords.items():
+            if coords[k][0] - radius < event.x < coords[k][0] + radius and coords[k][1] - radius < event.y < \
+                    coords[k][1] + radius:
+                x = start[0]
+                y = start[1]
+                event.widget.create_line(x, y, event.x, event.y)
+                node2 = k
+                graph[node1].append(node2)
+                graph[node2].append(node1)
+                start, node1 , node2 = None, None, None
+
+def save():
+    f = open('coords.text', 'w')
+    for k,v in graph.items():
+        f.write(str(k) + ':' + str(v) + '\n')
+    f.close()
+
+#widgets
+root = Tk()
+root.title('Graph')
+
+#menu
+menubar = Menu(root)
+filemenu = Menu(menubar, tearoff=0)
+filemenu.add_command(label='Save', command=save)
+filemenu.add_command(label='Exit', command=root.quit())
+menubar.add_cascade(label='File', menu=filemenu)
+root.config(menu=menubar)
+
+canvas = Canvas(root, width=600, height=700)
+canvas.grid(row=0, column=0)
+canvas.create_image(300, 350)
+
+
+#event
+canvas.bind('<Button-2>', DrawNode)
+canvas.bind("<Button-1>", line_click)
+canvas.bind("<ButtonRelease-1>", line_release)
+
+#main loop
+root.mainloop()
