@@ -7,6 +7,7 @@ class BinaryTreeNode:
         self.value = value
         self.left = None
         self.right = None
+        self.parent = None
 
 class BinarySearchTree:
     def __init__(self):
@@ -83,8 +84,48 @@ class BinarySearchTree:
         print(node.key)
         if node.right:
             self.printTreeInOrder(node.right)
+            
+    def successor(self, node):
+        if node.right:
+            node = node.right
+            while node.left:
+                node = node.left
+        else:
+            while node != node.parent.left:
+                node = node.parent
+            node = node.parent
+        return node
 
-"""ARRAY/LIST BASED BINARY TREE"""
+    def Delete(self, node):
+        z = self.Finder(node)
+        
+        if not z.left or not z.right:
+            y = z
+        else:
+            y = self.successor(z)
+
+        if y.left:
+            x = y.left
+        else:
+            x = y.right
+
+        if x:
+            x.parent = y.parent
+            
+        if not y.parent:
+            self.root = x
+        else:
+            if y == y.parent.left:
+                y.parent.left = x
+            else:
+                y.parent.right = x
+                
+        if y != z:
+            z.key, y.key = y.key, z.key
+            
+        return y
+    
+"""ARRAY BASED BINARY TREE"""
 class BinarySearchTreeList:
     def __init__(self):
         self.tree = []
