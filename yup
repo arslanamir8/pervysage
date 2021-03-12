@@ -1,0 +1,363 @@
+#!/bin/python3
+
+import pandas as pd
+from pathlib import Path
+from scipy import stats
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+import time
+from fake_useragent import UserAgent
+import random
+from selenium.common.exceptions import NoSuchElementException
+import json
+from openpyxl import load_workbook
+from fuzzywuzzy import process
+import requests
+import os
+pd.set_option('mode.chained_assignment', None)
+players = ['Bradley Beal', 'Kevin Durant', 'Joel Embiid', 'Damian Lillard', 'Stephen Curry', 'Giannis Antetokounmpo',
+           'Jayson Tatum', 'Luka Doncic', 'Trae Young', 'Zach LaVine', 'Jaylen Brown', 'Kawhi Leonard', 'Nikola Jokic',
+           'LeBron James', 'Paul George', 'James Harden', 'Collin Sexton', 'Brandon Ingram', 'Jerami Grant',
+           'Zion Williamson', 'Donovan Mitchell', 'Devin Booker', 'Gordon Hayward', 'Julius Randle', 'Malcolm Brogdon',
+           'Anthony Davis', 'Domantas Sabonis', 'Victor Oladipo', 'Malik Beasley', 'Tobias Harris',
+           'DeMar DeRozan', 'Fred VanVleet', 'Bam Adebayo', 'Pascal Siakam', 'Jamal Murray', 'Ben Simmons',
+           'Nikola Vucevic', 'De%27Aaron Fox', 'Khris Middleton', 'Jimmy Butler', 'Tyler Herro', 'Duncan Robinson',
+           'Julius Randle', 'RJ Barrett', 'Bojan Bogdanovic', 'Jordan Clarkson', 'Rudy Gobert', 'Russell Westbrook',
+           'Terry Rozier', 'LaMelo Ball', 'John Wall', 'Eric Gordon', 'Demarcus Cousins', 'Norman Powell', 'Kyle Lowry',
+           'Ja Morant', 'Dillon Brooks', 'Coby White', 'Thaddeus Young', 'Patrick Williams', 'Andrew Wiggins',
+           'Dejounte Murray', 'Keldon Johnson', 'Derrick White', 'Draymond Green', 'Kristaps Porzingis', 'Josh Richardson',
+           'Maxi Kleber', 'Andre Drummond', 'Darius Garland', 'Isaac Okoro', 'Taurean Prince', 'Chris Paul', 'Deandre Ayton',
+           'Mikal Bridges', 'Jrue Holiday', 'Brook Lopez', 'Bobby Portis', 'Donte DiVincenzo', 'Will Barton',
+           'Shai Gilgeous-Alexander', 'Al Horford', 'Darius Bazley', 'Luguentz Dort', 'Kenrich Williams', 'Dennis Schroder',
+           'Cody Zeller', 'Jae%27Sean Tate', 'Kyrie Irving', 'Alex Len', 'Semi Ojeleye', 'Rui Hachimura', 'Moritz Wagner',
+           'Kemba Walker', 'Daniel Theis']
+
+
+def Excel_Verify(df, file, date):
+    book = load_workbook(f'/Users/arslanamir/Documents/{file}.xlsx', data_only=False)
+    writer = pd.ExcelWriter(f'/Users/arslanamir/Documents/{file}.xlsx', engine='openpyxl')
+    writer.book = book
+    writer.sheets = {ws.title: ws for ws in book.worksheets}
+    df.to_excel(writer, sheet_name=date, index=False)
+    writer.save()
+
+
+def Append_Df_Excel(df, file, date):
+    book = load_workbook(f'/Users/arslanamir/Documents/{file}.xlsx')
+    writer = pd.ExcelWriter(f'/Users/arslanamir/Documents/{file}.xlsx', engine='openpyxl')
+    writer.book = book
+    writer.sheets = {ws.title: ws for ws in book.worksheets}
+    if date in writer.sheets:
+        df.to_excel(writer, sheet_name=date, startrow=writer.sheets[date].max_row, header=False)
+    if date not in writer.sheets:
+        df.to_excel(writer, sheet_name=date)
+    writer.save()
+
+
+def ReadDataFrame(name):
+    new = pd.read_csv(f'{name}', index_col=[0])
+    return new
+
+
+def get_data():
+    url = 'https://stats.nba.com/stats/leaguegamelog'
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                             'Chrome/88.0.4324.150 Safari/537.36',
+    'Referer': 'http://stats.nba.com'}
+
+    payload = {
+    'Counter': '1000',
+    'DateFrom': '',
+    'DateTo': '',
+    'Direction': 'DESC',
+    'LeagueID': '00',
+    'PlayerOrTeam': 'P',
+    'Season': '2020-21',
+    'SeasonType': 'Regular Season',
+    'Sorter': 'DATE'}
+
+    jsonData = requests.get(url, headers=headers, params=payload).json()
+
+    cols = jsonData['resultSets'][0]['headers']
+    data = jsonData['resultSets'][0]['rowSet']
+    df = pd.DataFrame(data, columns=cols)
+    return df
+
+
+def Game_Log_Scraper(players):
+    directory = '/Users/arslanamir/PycharmProjects/nba'
+    for filename in os.listdir(directory):
+        if filename.endswith(".csv"):
+            filename = filename[:-4]
+            players.append(filename)
+        else:
+            continue
+
+    data = get_data()
+    for name in players:
+
+        # Use fuzzywuzzy to match player name
+        choices = list(data['PLAYER_NAME'].unique())
+        player = process.extractOne(f'{name}', choices)[0]
+
+        #if not Path(f'/Users/arslanamir/PycharmProjects/nba/{first} {last}').is_file():
+        if Path(f'/Users/arslanamir/PycharmProjects/nba/{player}.csv').is_file():
+            player_df = data[data['PLAYER_NAME'] == player]
+
+            not_needed = ['MATCHUP', 'SEASON_ID', 'PLAYER_ID', 'TEAM_ID', 'TEAM_ABBREVIATION', 'FGM', 'FGA', 'FG3A',
+                          'FG3_PCT', 'FTM', 'FTA', 'FT_PCT', 'BLK', 'PLUS_MINUS',
+                          'FANTASY_PTS', 'FG_PCT', 'OREB', 'DREB', 'PF', 'FANTASY_PTS', 'VIDEO_AVAILABLE', 'TEAM_NAME',
+                          'GAME_ID']
+
+            player_df.drop(not_needed, axis=1, inplace=True)
+            player_df.dropna(axis=0, inplace=True)
+            player_df.drop('WL', axis=1, inplace=True)
+
+            player_df.to_csv(f'/Users/arslanamir/PycharmProjects/nba/{player}.csv', index=False)
+            #print(f'{player} file saved.')
+
+        else:
+            pass
+
+
+def Single_Player_Percentile(name, x, category):
+    new = ReadDataFrame(f'{name}.csv')
+    return stats.percentileofscore(new[category], x)
+
+
+def Single_Player_Dataframe(name):
+    new = ReadDataFrame(f'{name}.csv')
+    return new
+
+
+def Over_Under_Scraper(date, file='BACKUP', place=False, player_list=players):
+    picks = {}
+    options = Options()
+    ua = UserAgent(verify_ssl=False)
+    userAgent = ua.random
+    options.add_argument(f'user-agent={userAgent}')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
+    options.add_argument("--disable-blink-features")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+
+    username = 'arslanamir15@gmail.com'
+    password = 'Porschecarrera9!'
+
+    driver = webdriver.Chrome(options=options, executable_path='/Users/arslanamir/PycharmProjects/chromedriver')
+    driver.set_window_size(1440, 789)
+    driver.implicitly_wait(1)
+
+    driver.get('https://pa.sportsbook.fanduel.com/sports/navigation/830.1/10107.3')
+    time.sleep(random.random())
+
+    ######################
+    '''
+    driver.find_element_by_class_name('q-replacement-login-btn-content').click()
+    time.sleep(random.randint(1,10))
+
+    driver.find_element_by_link_text('Pennsylvania').click()
+    time.sleep(random.randint(1,10))
+
+    username_input = driver.find_element_by_id('login-email')
+    for character in username:
+        username_input.send_keys(character)
+        time.sleep(random.random())
+    time.sleep(random.randint(1,10))
+
+    password_input = driver.find_element_by_id('login-password')
+    for character in password:
+        password_input.send_keys(character)
+        time.sleep(random.random())
+    time.sleep(random.randint(1,10))
+
+    driver.find_element_by_xpath('//*[@id="root"]/div/main/div/section/div/form/button').click()
+    time.sleep(random.randint(1,10))
+
+    driver.get('https://pa.sportsbook.fanduel.com/sports/navigation/830.1/10107.3')
+    time.sleep(random.randint(1,10))
+    ##########################################
+    '''
+
+    more_wagers = driver.find_elements_by_class_name('arrow')
+    for i in range(4):
+        time.sleep(random.randint(5, 10))
+        driver.execute_script("arguments[0].click();", more_wagers[i])
+        time.sleep(random.random())
+        try:
+            try:
+                player_props = driver.find_element_by_xpath("//*[contains(text(),'Player Props')]")
+                driver.execute_script("arguments[0].click();", player_props)
+            except NoSuchElementException:
+                live_player_props = driver.find_element_by_xpath("//*[contains(text(),'Live Player Props')]")
+                driver.execute_script("arguments[0].click();", live_player_props)
+        except:
+            driver.get('https://pa.sportsbook.fanduel.com/sports/navigation/830.1/10107.3')
+            more_wagers = driver.find_elements_by_class_name('arrow')
+            continue
+        time.sleep(random.random())
+
+        first_click = driver.find_element_by_class_name('market-name-title')
+        driver.execute_script("arguments[0].click();", first_click)
+        time.sleep(random.random())
+
+        player_pts = driver.find_elements_by_xpath("//*[contains(text(),'- Points') and not(contains(text(), '+'))]")
+        time.sleep(random.random())
+
+        player_ast = driver.find_elements_by_xpath("//*[contains(text(),'- Assists') and not(contains(text(), '+'))]")
+        time.sleep(random.random())
+
+        player_reb = driver.find_elements_by_xpath("//*[contains(text(),'- Rebounds') and not(contains(text(), '+'))]")
+        time.sleep(random.random())
+
+        player_stl = driver.find_elements_by_xpath("//*[contains(text(),'- Steals') and not(contains(text(), '+'))]")
+        time.sleep(random.random())
+
+        player_3pm = driver.find_elements_by_xpath("//*[contains(text(),'- Three Made') and not(contains(text(), '+'))]")
+        time.sleep(random.random())
+
+        player_to = driver.find_elements_by_xpath("//*[contains(text(),'- Turnovers') and not(contains(text(), '+'))]")
+        time.sleep(random.random())
+
+        for player in player_pts:
+            time.sleep(random.random())
+            driver.execute_script("arguments[0].click();", player)
+            time.sleep(random.random())
+            try:
+                try:
+                    line = float(driver.find_element_by_class_name('uo-currenthandicap').text)
+                    print(line)
+                    odds = driver.find_elements_by_class_name('selectionprice')
+                    print(int(odds[0].text), int(odds[1].text))
+                    name = str(player.text)
+                    name = ''.join(map(str, name[:-9]))
+                    average = Single_Player_Dataframe(name)['PTS'].mean()
+                    std = Single_Player_Dataframe(name)['PTS'].std()
+                    cv = std/average
+                    print(name)
+                    if name not in player_list:
+                        player_list.append(name)
+                        Game_Log_Scraper(player_list)
+                    if name in player_list:
+                        try:
+                            if Single_Player_Percentile(name, line, 'PTS') >= 80:
+                                picks[name] = 'U', line, int(odds[1].text), Single_Player_Percentile(name, line,
+                                                                                                            'PTS'), \
+                                              Single_Player_Dataframe(name)['PTS'].mean(), \
+                                              Single_Player_Dataframe(name)['PTS'].std()
+                                if place:
+                                    single_bet_place = driver.find_elements_by_class_name('uo-currenthandicap')
+                                    driver.execute_script("arguments[0].click();", single_bet_place[1])
+                                    bets = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[3]/div/div[2]/div[2]/"
+                                                                        "div/div[3]/div/span[1]/div/input")
+                                    bets.send_keys('.1')
+                                    confirm = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[7]/div[2]/div[2]/div[2]/div[2]/button")
+                                    driver.execute_script("arguments[0].click();", confirm)
+                                print(Single_Player_Percentile(name, line, 'PTS'), Single_Player_Dataframe(name)['PTS'].mean(),
+                                      'UNDER')
+                            time.sleep(1)
+                            if Single_Player_Percentile(name, line, 'PTS') <= 20:
+                                picks[name] = 'O', line, int(odds[0].text), Single_Player_Percentile(name, line,
+                                                                                                            'PTS'), \
+                                              Single_Player_Dataframe(name)['PTS'].mean(), \
+                                              Single_Player_Dataframe(name)['PTS'].std()
+                                if place:
+                                    single_bet_place = driver.find_elements_by_class_name('uo-currenthandicap')
+                                    driver.execute_script("arguments[0].click();", single_bet_place[0])
+                                    bets = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[3]/div/div[2]/div[2]/"
+                                                                        "div/div[3]/div/span[1]/div/input")
+                                    bets.send_keys('.1')
+                                    confirm = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[7]/div[2]/div[2]/div[2]/div[2]/button")
+                                    driver.execute_script("arguments[0].click();", confirm)
+                                print(Single_Player_Percentile(name, line, 'PTS'), Single_Player_Dataframe(name)['PTS'].mean(),
+                                      'OVER')
+                            time.sleep(1)
+                        except FileNotFoundError:
+                            pass
+                        time.sleep(random.random())
+                    print("##################################################################################")
+                except:
+                    pass
+            except KeyError:
+                pass
+            driver.execute_script("arguments[0].click();", player)
+            player_lines = driver.find_elements_by_xpath("//*[contains(text(),'- Points') and not(contains(text(), '+'))]")
+        driver.get('https://pa.sportsbook.fanduel.com/sports/navigation/830.1/10107.3')
+        time.sleep(random.random())
+        i += 1
+        more_wagers = driver.find_elements_by_class_name('arrow')
+        time.sleep(random.random())
+
+
+    driver.close()
+
+    printout = pd.DataFrame.from_dict(picks).T
+    printout.columns = ['O/U', 'Strike', 'Odds', 'Percentile', 'Average', 'Std']
+    Append_Df_Excel(printout, file, date)
+
+    if Path(file).is_file():
+        with open(file, 'a') as f:
+            json.dump(picks, f, indent=2)
+    else:
+        with open(file, 'w+') as f:
+            json.dump(picks, f, indent=2)
+
+    return players
+
+
+def Verify(date, players=players):
+    loader = load_workbook('/Users/arslanamir/Documents/BACKUP.xlsx', data_only=False)
+    ws = loader[date]
+    data = ws.values
+    columns = next(data)[0:]
+    sheet = pd.DataFrame(data, columns=columns)
+    for name in sheet[sheet.columns[0]]:
+        if name not in players:
+            players.append(name)
+    directory = '/Users/arslanamir/PycharmProjects/nba'
+    for filename in os.listdir(directory):
+        if filename.endswith(".csv"):
+            filename = filename[:-4]
+            players.append(filename)
+        else:
+            continue
+    data = get_data()
+    for name in players:
+        # Use fuzzywuzzy to match player name
+        choices = list(data['PLAYER_NAME'].unique())
+        player = process.extractOne(f'{name}', choices)[0]
+        player_df = data[data['PLAYER_NAME'] == player]
+        not_needed = ['MATCHUP', 'SEASON_ID', 'PLAYER_ID', 'TEAM_ID', 'TEAM_ABBREVIATION', 'FGM', 'FGA', 'FG3M',
+                      'FG3A', 'FG3_PCT', 'FTM', 'FTA', 'FT_PCT', 'STL', 'BLK', 'TOV', 'PLUS_MINUS',
+                      'FANTASY_PTS', 'FG_PCT', 'OREB', 'DREB', 'PF', 'FANTASY_PTS', 'VIDEO_AVAILABLE', 'TEAM_NAME',
+                      'GAME_ID']
+        player_df.drop(not_needed, axis=1, inplace=True)
+        player_df.dropna(axis=0, inplace=True)
+        player_df.drop('WL', axis=1, inplace=True)
+
+        player_df.to_csv(f'/Users/arslanamir/PycharmProjects/nba/{name}.csv', index=False)
+        print(f'{name} file saved.')
+    #sheet = sheet.iloc[2:]
+
+    for x in range(len(sheet.index)):
+        name = sheet.iat[x, 0]
+        overunder = sheet.iat[x, 1]
+        strike = sheet.iat[x, 2]
+        check = pd.read_csv(f'/Users/arslanamir/PycharmProjects/nba/{name}.csv')
+        for i in range(len(check['GAME_DATE'])):
+            if check['GAME_DATE'][i] == date:
+                row = check[check['GAME_DATE'] == date].index[0]
+                if overunder == 'O' and check['PTS'][row] < strike:
+                    sheet.iat[x, 8] = 0
+                if overunder == 'U' and check['PTS'][row] > strike:
+                    sheet.iat[x, 8] = 0
+            else:
+                pass
+
+    Excel_Verify(sheet, 'BACKUP', date)
+
+
+#Over_Under_Scraper('2021-03-11')
+Game_Log_Scraper(players)
+Verify('2021-03-11')
+
