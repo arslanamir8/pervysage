@@ -14,6 +14,7 @@ from openpyxl import load_workbook
 from fuzzywuzzy import process
 import requests
 import os
+
 pd.set_option('mode.chained_assignment', None)
 players = ['Bradley Beal', 'Kevin Durant', 'Joel Embiid', 'Damian Lillard', 'Stephen Curry', 'Giannis Antetokounmpo',
            'Jayson Tatum', 'Luka Doncic', 'Trae Young', 'Zach LaVine', 'Jaylen Brown', 'Kawhi Leonard', 'Nikola Jokic',
@@ -30,7 +31,7 @@ players = ['Bradley Beal', 'Kevin Durant', 'Joel Embiid', 'Damian Lillard', 'Ste
            'Mikal Bridges', 'Jrue Holiday', 'Brook Lopez', 'Bobby Portis', 'Donte DiVincenzo', 'Will Barton',
            'Shai Gilgeous-Alexander', 'Al Horford', 'Darius Bazley', 'Luguentz Dort', 'Kenrich Williams', 'Dennis Schroder',
            'Cody Zeller', 'Jae%27Sean Tate', 'Kyrie Irving', 'Alex Len', 'Semi Ojeleye', 'Rui Hachimura', 'Moritz Wagner',
-           'Kemba Walker', 'Daniel Theis']
+           'Kemba Walker', 'Daniel Theis', 'John Collins', 'Clint Capela', 'Tony Snell', 'Kevin Huerter']
 
 
 def Excel_Verify(df, file, date):
@@ -101,23 +102,19 @@ def Game_Log_Scraper(players):
         player = process.extractOne(f'{name}', choices)[0]
 
         #if not Path(f'/Users/arslanamir/PycharmProjects/nba/{first} {last}').is_file():
-        if Path(f'/Users/arslanamir/PycharmProjects/nba/{player}.csv').is_file():
-            player_df = data[data['PLAYER_NAME'] == player]
+        player_df = data[data['PLAYER_NAME'] == player]
 
-            not_needed = ['MATCHUP', 'SEASON_ID', 'PLAYER_ID', 'TEAM_ID', 'TEAM_ABBREVIATION', 'FGM', 'FGA', 'FG3A',
-                          'FG3_PCT', 'FTM', 'FTA', 'FT_PCT', 'BLK', 'PLUS_MINUS',
-                          'FANTASY_PTS', 'FG_PCT', 'OREB', 'DREB', 'PF', 'FANTASY_PTS', 'VIDEO_AVAILABLE', 'TEAM_NAME',
-                          'GAME_ID']
+        not_needed = ['MATCHUP', 'SEASON_ID', 'PLAYER_ID', 'TEAM_ID', 'TEAM_ABBREVIATION', 'FGM', 'FGA', 'FG3A',
+                      'FG3_PCT', 'FTM', 'FTA', 'FT_PCT', 'BLK', 'PLUS_MINUS',
+                      'FANTASY_PTS', 'FG_PCT', 'OREB', 'DREB', 'PF', 'FANTASY_PTS', 'VIDEO_AVAILABLE', 'TEAM_NAME',
+                      'GAME_ID']
 
-            player_df.drop(not_needed, axis=1, inplace=True)
-            player_df.dropna(axis=0, inplace=True)
-            player_df.drop('WL', axis=1, inplace=True)
+        player_df.drop(not_needed, axis=1, inplace=True)
+        player_df.dropna(axis=0, inplace=True)
+        player_df.drop('WL', axis=1, inplace=True)
 
-            player_df.to_csv(f'/Users/arslanamir/PycharmProjects/nba/{player}.csv', index=False)
-            #print(f'{player} file saved.')
-
-        else:
-            pass
+        player_df.to_csv(f'/Users/arslanamir/PycharmProjects/nba/{player}.csv', index=False)
+        #print(f'{player} file saved.')
 
 
 def Single_Player_Percentile(name, x, category):
@@ -130,7 +127,15 @@ def Single_Player_Dataframe(name):
     return new
 
 
-def Over_Under_Scraper(date, file='BACKUP', place=False, player_list=players):
+def Over_Under_Scraper(date, n, file='BACKUP', place=False, player_list=players):
+    directory = '/Users/arslanamir/PycharmProjects/nba'
+    for filename in os.listdir(directory):
+        if filename.endswith(".csv"):
+            filename = filename[:-4]
+            players.append(filename)
+        else:
+            continue
+    print(len(player_list))
     picks = {}
     options = Options()
     ua = UserAgent(verify_ssl=False)
@@ -155,32 +160,27 @@ def Over_Under_Scraper(date, file='BACKUP', place=False, player_list=players):
     '''
     driver.find_element_by_class_name('q-replacement-login-btn-content').click()
     time.sleep(random.randint(1,10))
-
     driver.find_element_by_link_text('Pennsylvania').click()
     time.sleep(random.randint(1,10))
-
     username_input = driver.find_element_by_id('login-email')
     for character in username:
         username_input.send_keys(character)
         time.sleep(random.random())
     time.sleep(random.randint(1,10))
-
     password_input = driver.find_element_by_id('login-password')
     for character in password:
         password_input.send_keys(character)
         time.sleep(random.random())
     time.sleep(random.randint(1,10))
-
     driver.find_element_by_xpath('//*[@id="root"]/div/main/div/section/div/form/button').click()
     time.sleep(random.randint(1,10))
-
     driver.get('https://pa.sportsbook.fanduel.com/sports/navigation/830.1/10107.3')
     time.sleep(random.randint(1,10))
     ##########################################
     '''
 
     more_wagers = driver.find_elements_by_class_name('arrow')
-    for i in range(4):
+    for i in range(n):
         time.sleep(random.randint(5, 10))
         driver.execute_script("arguments[0].click();", more_wagers[i])
         time.sleep(random.random())
@@ -188,7 +188,7 @@ def Over_Under_Scraper(date, file='BACKUP', place=False, player_list=players):
             try:
                 player_props = driver.find_element_by_xpath("//*[contains(text(),'Player Props')]")
                 driver.execute_script("arguments[0].click();", player_props)
-            except NoSuchElementException:
+            except NoSuchElementException:                                             #Player Props
                 live_player_props = driver.find_element_by_xpath("//*[contains(text(),'Live Player Props')]")
                 driver.execute_script("arguments[0].click();", live_player_props)
         except:
@@ -204,84 +204,88 @@ def Over_Under_Scraper(date, file='BACKUP', place=False, player_list=players):
         player_pts = driver.find_elements_by_xpath("//*[contains(text(),'- Points') and not(contains(text(), '+'))]")
         time.sleep(random.random())
 
-        player_ast = driver.find_elements_by_xpath("//*[contains(text(),'- Assists') and not(contains(text(), '+'))]")
-        time.sleep(random.random())
-
-        player_reb = driver.find_elements_by_xpath("//*[contains(text(),'- Rebounds') and not(contains(text(), '+'))]")
-        time.sleep(random.random())
-
-        player_stl = driver.find_elements_by_xpath("//*[contains(text(),'- Steals') and not(contains(text(), '+'))]")
-        time.sleep(random.random())
-
-        player_3pm = driver.find_elements_by_xpath("//*[contains(text(),'- Three Made') and not(contains(text(), '+'))]")
-        time.sleep(random.random())
-
-        player_to = driver.find_elements_by_xpath("//*[contains(text(),'- Turnovers') and not(contains(text(), '+'))]")
-        time.sleep(random.random())
+        #player_ast = driver.find_elements_by_xpath("//*[contains(text(),'- Assists') and not(contains(text(), '+'))]")
+        #time.sleep(random.random())
+        #player_reb = driver.find_elements_by_xpath("//*[contains(text(),'- Rebounds') and not(contains(text(), '+'))]")
+        #time.sleep(random.random())
+        #player_stl = driver.find_elements_by_xpath("//*[contains(text(),'- Steals') and not(contains(text(), '+'))]")
+        #time.sleep(random.random())
+        #player_3pm = driver.find_elements_by_xpath("//*[contains(text(),'- Three Made') and not(contains(text(), '+'))]")
+        #time.sleep(random.random())
+        #player_to = driver.find_elements_by_xpath("//*[contains(text(),'- Turnovers') and not(contains(text(), '+'))]")
+        #time.sleep(random.random())
 
         for player in player_pts:
             time.sleep(random.random())
             driver.execute_script("arguments[0].click();", player)
             time.sleep(random.random())
             try:
-                try:
-                    line = float(driver.find_element_by_class_name('uo-currenthandicap').text)
-                    print(line)
-                    odds = driver.find_elements_by_class_name('selectionprice')
-                    print(int(odds[0].text), int(odds[1].text))
-                    name = str(player.text)
-                    name = ''.join(map(str, name[:-9]))
+                line = float(driver.find_element_by_class_name('uo-currenthandicap').text)
+                print(line)
+                odds = driver.find_elements_by_class_name('selectionprice')
+                print(int(odds[0].text), int(odds[1].text))
+
+                name = str(player.text)
+                name = ''.join(map(str, name[:-9]))
+                print(name)
+
+                if name not in player_list:
+                    player_list.append(name)
+                    Game_Log_Scraper(player_list)
+                if name == 'Robert Williams':
+                    name = 'Robert Williams III'
+                if name == 'PJ Washington':
+                    name = 'P.J. Washington'
+                if name[-3:] == 'Jnr':
+                    name = name[:-3]
+                    name = name + 'Jr.'
+                if name[-2:] == 'Jr':
+                    name = name + '.'
+                if name in player_list:
                     average = Single_Player_Dataframe(name)['PTS'].mean()
                     std = Single_Player_Dataframe(name)['PTS'].std()
-                    cv = std/average
-                    print(name)
-                    if name not in player_list:
-                        player_list.append(name)
-                        Game_Log_Scraper(player_list)
-                    if name in player_list:
-                        try:
-                            if Single_Player_Percentile(name, line, 'PTS') >= 80:
-                                picks[name] = 'U', line, int(odds[1].text), Single_Player_Percentile(name, line,
-                                                                                                            'PTS'), \
-                                              Single_Player_Dataframe(name)['PTS'].mean(), \
-                                              Single_Player_Dataframe(name)['PTS'].std()
-                                if place:
-                                    single_bet_place = driver.find_elements_by_class_name('uo-currenthandicap')
-                                    driver.execute_script("arguments[0].click();", single_bet_place[1])
-                                    bets = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[3]/div/div[2]/div[2]/"
-                                                                        "div/div[3]/div/span[1]/div/input")
-                                    bets.send_keys('.1')
-                                    confirm = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[7]/div[2]/div[2]/div[2]/div[2]/button")
-                                    driver.execute_script("arguments[0].click();", confirm)
-                                print(Single_Player_Percentile(name, line, 'PTS'), Single_Player_Dataframe(name)['PTS'].mean(),
-                                      'UNDER')
-                            time.sleep(1)
-                            if Single_Player_Percentile(name, line, 'PTS') <= 20:
-                                picks[name] = 'O', line, int(odds[0].text), Single_Player_Percentile(name, line,
-                                                                                                            'PTS'), \
-                                              Single_Player_Dataframe(name)['PTS'].mean(), \
-                                              Single_Player_Dataframe(name)['PTS'].std()
-                                if place:
-                                    single_bet_place = driver.find_elements_by_class_name('uo-currenthandicap')
-                                    driver.execute_script("arguments[0].click();", single_bet_place[0])
-                                    bets = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[3]/div/div[2]/div[2]/"
-                                                                        "div/div[3]/div/span[1]/div/input")
-                                    bets.send_keys('.1')
-                                    confirm = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[7]/div[2]/div[2]/div[2]/div[2]/button")
-                                    driver.execute_script("arguments[0].click();", confirm)
-                                print(Single_Player_Percentile(name, line, 'PTS'), Single_Player_Dataframe(name)['PTS'].mean(),
-                                      'OVER')
-                            time.sleep(1)
-                        except FileNotFoundError:
-                            pass
-                        time.sleep(random.random())
+                    cv = std / average
+                    try:
+                        if Single_Player_Percentile(name, line, 'PTS') >= 80:
+                            picks[name] = 'U', line, int(odds[1].text), Single_Player_Percentile(name, line,
+                                                                                                        'PTS'), \
+                                          Single_Player_Dataframe(name)['PTS'].mean(), \
+                                          Single_Player_Dataframe(name)['PTS'].std()
+                            if place:
+                                single_bet_place = driver.find_elements_by_class_name('uo-currenthandicap')
+                                driver.execute_script("arguments[0].click();", single_bet_place[1])
+                                bets = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[3]/div/div[2]/div[2]/"
+                                                                    "div/div[3]/div/span[1]/div/input")
+                                bets.send_keys('.1')
+                                confirm = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[7]/div[2]/div[2]/div[2]/div[2]/button")
+                                driver.execute_script("arguments[0].click();", confirm)
+                            print(Single_Player_Percentile(name, line, 'PTS'), Single_Player_Dataframe(name)['PTS'].mean(),
+                                  'UNDER')
+                        time.sleep(1)
+                        if Single_Player_Percentile(name, line, 'PTS') <= 20:
+                            picks[name] = 'O', line, int(odds[0].text), Single_Player_Percentile(name, line,
+                                                                                                        'PTS'), \
+                                          Single_Player_Dataframe(name)['PTS'].mean(), \
+                                          Single_Player_Dataframe(name)['PTS'].std()
+                            if place:
+                                single_bet_place = driver.find_elements_by_class_name('uo-currenthandicap')
+                                driver.execute_script("arguments[0].click();", single_bet_place[0])
+                                bets = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[3]/div/div[2]/div[2]/"
+                                                                    "div/div[3]/div/span[1]/div/input")
+                                bets.send_keys('.1')
+                                confirm = driver.find_element_by_xpath("//*[@id='SBbetSlip']/div[7]/div[2]/div[2]/div[2]/div[2]/button")
+                                driver.execute_script("arguments[0].click();", confirm)
+                            print(Single_Player_Percentile(name, line, 'PTS'), Single_Player_Dataframe(name)['PTS'].mean(),
+                                  'OVER')
+                        time.sleep(1)
+                    except FileNotFoundError:
+                        pass
+                    time.sleep(random.random())
                     print("##################################################################################")
-                except:
-                    pass
-            except KeyError:
+            except ValueError:
                 pass
             driver.execute_script("arguments[0].click();", player)
-            player_lines = driver.find_elements_by_xpath("//*[contains(text(),'- Points') and not(contains(text(), '+'))]")
+        player_lines = driver.find_elements_by_xpath("//*[contains(text(),'- Points') and not(contains(text(), '+'))]")
         driver.get('https://pa.sportsbook.fanduel.com/sports/navigation/830.1/10107.3')
         time.sleep(random.random())
         i += 1
@@ -292,18 +296,20 @@ def Over_Under_Scraper(date, file='BACKUP', place=False, player_list=players):
     driver.close()
 
     printout = pd.DataFrame.from_dict(picks).T
-    printout.columns = ['O/U', 'Strike', 'Odds', 'Percentile', 'Average', 'Std']
-    Append_Df_Excel(printout, file, date)
+    try:
+        printout.columns = ['O/U', 'Strike', 'Odds', 'Percentile', 'Average', 'Std']
+        Append_Df_Excel(printout, file, date)
 
-    if Path(file).is_file():
-        with open(file, 'a') as f:
-            json.dump(picks, f, indent=2)
-    else:
-        with open(file, 'w+') as f:
-            json.dump(picks, f, indent=2)
+        if Path(file).is_file():
+            with open(file, 'a') as f:
+                json.dump(picks, f, indent=2)
+        else:
+            with open(file, 'w+') as f:
+                json.dump(picks, f, indent=2)
 
-    return players
-
+        return players
+    except ValueError:
+        print("NOTHING FOUND")
 
 def Verify(date, players=players):
     loader = load_workbook('/Users/arslanamir/Documents/BACKUP.xlsx', data_only=False)
@@ -356,8 +362,11 @@ def Verify(date, players=players):
 
     Excel_Verify(sheet, 'BACKUP', date)
 
-
-#Over_Under_Scraper('2021-03-11')
-Game_Log_Scraper(players)
-Verify('2021-03-11')
-
+flag = 1
+date = '2021-04-12'
+n = 2
+if flag == 0:
+    Over_Under_Scraper(date, n)
+else:
+    Game_Log_Scraper(players)
+    Verify(date)
