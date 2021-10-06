@@ -1,0 +1,39 @@
+#!/bin/python3
+
+import pandas as pd
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+import time
+from selenium.common.exceptions import NoSuchElementException
+import numpy as np
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+import sklearn
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+
+
+def scrape_draft_cost():
+    driver = webdriver.Chrome(executable_path='/Users/arslanamir/PycharmProjects/chromedriver')
+    driver.get('https://fantasy.espn.com/basketball/league/draftrecap?leagueId=538784979&seasonId=2021')
+    time.sleep(10)
+    players = driver.find_elements_by_class_name('AnchorLink.link.clr-link.pointer')
+    prices = driver.find_elements_by_class_name('fr')
+    numerate_prices = []
+    player_scores = []
+    for price in prices:
+        numerate_prices.append(price.text)
+        print(price.text)
+    for player in players:
+        player.click()
+        driver.implicitly_wait(60)
+        score = driver.find_elements_by_class_name('player-stat-value')
+        #print(score)
+        player_scores.append(score[1].text)
+        print(score[1].text)
+        driver.find_element_by_class_name('jsx-3684495974.lightbox__closebtn').click()
+
+
+
+scrape_draft_cost()
