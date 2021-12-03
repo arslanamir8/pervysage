@@ -1,0 +1,81 @@
+#!/bin/python3
+
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
+
+
+def Ema_Scraper():
+    s = Service('/usr/local/bin/chromedriver')
+    driver = webdriver.Chrome(service=s)
+    url = '##########################'
+    driver.get(url)
+    driver.find_element(By.CLASS_NAME, "login-input-username").send_keys("##############")
+    driver.find_element(By.CLASS_NAME, "login-input-password").send_keys("###########")
+    driver.find_element(By.CLASS_NAME, 'login-btn').click()
+    driver.find_element(By.LINK_TEXT, 'Patients').click()
+    time.sleep(1)
+    driver.find_elements(By.CLASS_NAME, 'ribbon-button-large')[1].click()
+    select = Select(driver.find_element(By.ID, 'ageInequality'))
+    select.select_by_visible_text('Less than or equal to')
+    driver.find_element(By.ID, 'age').send_keys('75')
+    driver.find_element(By.ID, 'icd9Code').send_keys('L40')
+    driver.find_element(By.NAME, 'search').click()
+    time.sleep(1)
+
+    counter = 0
+    cv = ['heart disease', 'Atrial fibrillation', 'Irregular heartbeat', 'Coronary artery disease', 'Stroke']
+    statins = ['atorvastatin', 'Lipitor', 'fluvastatin', 'Lescol', 'lovastatin', 'Mevacor', 'Altoprev', 'pitavastatin',
+               'Livalo', 'Nikita', 'pravastatin', 'Pravachol', 'rosuvastatin', 'Crestor', 'simvastatin', 'Zocor', 'metformin']
+
+    for x in range(2,100):
+        select = Select(driver.find_element(By.XPATH, '//*[@id="usageListPager_center"]/table/tbody/tr/td[8]/select'))
+        select.select_by_visible_text('100')
+        time.sleep(1)
+        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, f'//table/tbody/tr[{x}]/td[3]/a'))).click()
+        try:
+            medications = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="faceSheetContainer"]/div[2]')))
+        except:
+            driver.back()
+            driver.refresh()
+            continue
+        try:
+            medications = medications.text.split('Medications:', maxsplit=1)[1].split('Allergies:', maxsplit=1)[0].splitlines()
+        except IndexError:
+            medications = WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="faceSheetContainer"]/div[3]')))
+            medications = medications.text.split('Medications:', maxsplit=1)[1].split('Allergies:', maxsplit=1)[
+                0].splitlines()
+        del medications[0]
+        history = driver.find_elements(By.XPATH, '//*[@id="faceSheetContainer"]/div[2]/div[4]/div')
+        try:
+            del history[-1]
+        except IndexError:
+            pass
+        counter += 1
+        hist = True
+
+        for cardiovascular in cv:
+            if any(s.text.startswith(cardiovascular) for s in history):
+                counter -= 1
+                hist = False
+                break
+        for statin in statins:
+            if any(s.startswith(statin) for s in medications):
+                if hist == False:
+                    break
+                counter -= 1
+                break
+        for histor in history:
+            print(histor.text)
+        for medication in medications:
+            print(medication)
+        print("############", counter, "#################")
+        driver.back()
+        driver.refresh()
+
+Ema_Scraper()
+
