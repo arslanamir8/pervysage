@@ -17,8 +17,8 @@ def ema_scraper():
     driver = webdriver.Chrome(service=s)
     url = 'https://amir.ema.md/ema/ProviderLogin.action'
     driver.get(url)
-    driver.find_element(By.CLASS_NAME, "login-input-username").send_keys("tabi")
-    driver.find_element(By.CLASS_NAME, "login-input-password").send_keys("Tabiamir@ema4")
+    driver.find_element(By.CLASS_NAME, "login-input-username").send_keys("###################")
+    driver.find_element(By.CLASS_NAME, "login-input-password").send_keys("#####################")
     driver.find_element(By.CLASS_NAME, 'login-btn').click()
     driver.find_element(By.LINK_TEXT, 'Patients').click()
     time.sleep(1)
