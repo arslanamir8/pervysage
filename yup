@@ -147,7 +147,7 @@ def Over_Under_Scraper(date, n, file='BACKUP', place=False, player_list=players)
     options.add_argument("--disable-blink-features=AutomationControlled")
 
     username = 'arslanamir15@gmail.com'
-    password = 'Porschecarrera9!'
+    password = '######################'
 
     driver = webdriver.Chrome(options=options, executable_path='/Users/arslanamir/PycharmProjects/chromedriver')
     driver.set_window_size(1440, 789)
