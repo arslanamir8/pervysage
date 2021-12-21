@@ -62,8 +62,8 @@ def nba_scraper():
 
 
 def fanduel_scraper():
-    bets = 0
-    count = 0
+    bets, count = 0, 0
+    picks = {}
     s = Service('/usr/local/bin/chromedriver')
     driver = webdriver.Chrome(service=s)
     url = 'https://sportsbook.fanduel.com/navigation/nba'
@@ -73,17 +73,17 @@ def fanduel_scraper():
     pages = ['Points', 'Rebounds', 'Assists', 'Threes']
     for page in pages:
         for i in range(len(games)):
-            WebDriverWait(driver, 20).until(EC.element_to_be_clickable((games[i]))).click()
+            WebDriverWait(driver, 5).until(EC.element_to_be_clickable((games[i]))).click()
             try:
-                WebDriverWait(driver, 20).until(EC.element_to_be_clickable
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable
                                                 ((By.XPATH, f"//*[contains(text(),'{page}')]"))).click()
             except TimeoutException:
                 driver.get(url)
-                games = WebDriverWait(driver, 20).until(
+                games = WebDriverWait(driver, 5).until(
                     EC.presence_of_all_elements_located((By.PARTIAL_LINK_TEXT, "More wagers")))
                 continue
-            props = WebDriverWait(driver, 20).until(
-                EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'Player')]")))
+            #props = WebDriverWait(driver, 5).until(
+                #EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'Player')]")))
             try:
                 WebDriverWait(driver, 1).until(EC.element_to_be_clickable
                                                ((By.XPATH, "//*[contains(text(), 'Show more')]"))).click()
@@ -113,29 +113,36 @@ def fanduel_scraper():
                     print(line_over.text, line_over_odds, line_under.text, line_under_odds)
                     if stat_checker(name.text, cat) < float(line_over.text[2:]) - 1:
                         print(stat_checker(name.text, cat))
-                        print('UNDER PLACED', line_under_odds)
+                        print('UNDER PLACED', line_under_odds, stat_checker(name.text, cat))
                         bets += 1
+                        picks[name.text + cat] = name.text, 'U', float(line_under.text[2:]), float(line_under_odds), \
+                                                 stat_checker(name.text, cat), cat
                     elif stat_checker(name.text, cat) > float(line_over.text[2:]) + 1:
                         print(stat_checker(name.text, cat))
                         print('OVER PLACED', line_over_odds)
                         bets += 1
+                        picks[name.text + cat] = name.text, 'O', float(line_over.text[2:]), float(line_over_odds), \
+                                                 stat_checker(name.text, cat), cat
                     else:
                         pass
-                    print('##############################################')
 
                 except NoSuchElementException:
                     print('Locked')
                     pass
+                print('##############################################')
 
             driver.get(url)
-            games = WebDriverWait(driver, 20).until(
+            games = WebDriverWait(driver, 5).until(
                 EC.presence_of_all_elements_located((By.PARTIAL_LINK_TEXT, "More wagers")))
     print(f'Bets placed: {bets} out of {count} possible')
+    printout = pd.DataFrame.from_dict(picks).T
+    printout.columns = ['Name', 'O/U', 'Strike', 'Odds', 'Median', 'Cat']
+    # noinspection PyTypeChecker
+    printout.to_csv('/Users/arslanamir/PycharmProjects/nba_bets.csv', index=False)
+
 
 def stat_checker(name, cat):
     sheet = pd.read_csv('/Users/arslanamir/PycharmProjects/nba.csv')
     sheet = sheet[sheet['Name'] == f'{name}']
     return sheet[f'{cat}'].median()
 
-
-fanduel_scraper()
