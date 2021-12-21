@@ -71,18 +71,23 @@ def fanduel_scraper():
     for page in pages:
         for i in range(len(games)):
             WebDriverWait(driver, 20).until(EC.element_to_be_clickable((games[i]))).click()
-            WebDriverWait(driver, 20).until(EC.element_to_be_clickable
-                                            ((By.XPATH, f"//*[contains(text(),'{page}')]"))).click()
+            try:
+                WebDriverWait(driver, 20).until(EC.element_to_be_clickable
+                                                ((By.XPATH, f"//*[contains(text(),'{page}')]"))).click()
+            except TimeoutException:
+                driver.get(url)
+                games = WebDriverWait(driver, 20).until(
+                    EC.presence_of_all_elements_located((By.PARTIAL_LINK_TEXT, "More wagers")))
+                continue
             props = WebDriverWait(driver, 20).until(
                 EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'Player')]")))
             try:
                 WebDriverWait(driver, 20).until(EC.element_to_be_clickable
-                                                ((By.XPATH, "//*[contains(text(), 'Show more')]")))\
-                    .click()
+                                                ((By.XPATH, "//*[contains(text(), 'Show more')]"))).click()
             except TimeoutException:
                 pass
             length = driver.find_elements(By.XPATH, "//span[text()='UNDER']//following::div[1]/*")
-            print(len(length))
+            print('Players:', len(length))
             for y in range(1, len(length)+1):
                 name = WebDriverWait(driver, 20).until(
                     EC.visibility_of_element_located
