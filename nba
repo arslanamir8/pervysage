@@ -10,6 +10,19 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import TimeoutException
+from openpyxl import load_workbook
+
+
+def append_df_excel(df, file, date):
+    book = load_workbook(f'/Users/arslanamir/PycharmProjects/{file}.xlsx')
+    writer = pd.ExcelWriter(f'/Users/arslanamir/PycharmProjects/{file}.xlsx', engine='openpyxl')
+    writer.book = book
+    writer.sheets = {ws.title: ws for ws in book.worksheets}
+    if date in writer.sheets:
+        df.to_excel(writer, sheet_name=date, startrow=writer.sheets[date].max_row, header=False)
+    if date not in writer.sheets:
+        df.to_excel(writer, sheet_name=date)
+    writer.save()
 
 
 def nba_scraper():
@@ -61,7 +74,7 @@ def nba_scraper():
     df.to_csv('/Users/arslanamir/PycharmProjects/nba.csv', index=False)
 
 
-def fanduel_scraper():
+def fanduel_scraper(date, file='nba_bets'):
     bets, count = 0, 0
     picks = {}
     s = Service('/usr/local/bin/chromedriver')
@@ -117,12 +130,14 @@ def fanduel_scraper():
                         bets += 1
                         picks[name.text + cat] = name.text, 'U', float(line_under.text[2:]), float(line_under_odds), \
                                                  stat_checker(name.text, cat), cat
+                        #input("Press Enter to continue...")
                     elif stat_checker(name.text, cat) > float(line_over.text[2:]) + 1:
                         print(stat_checker(name.text, cat))
                         print('OVER PLACED', line_over_odds)
                         bets += 1
                         picks[name.text + cat] = name.text, 'O', float(line_over.text[2:]), float(line_over_odds), \
                                                  stat_checker(name.text, cat), cat
+                        #input("Press Enter to continue...")
                     else:
                         pass
 
@@ -138,11 +153,15 @@ def fanduel_scraper():
     printout = pd.DataFrame.from_dict(picks).T
     printout.columns = ['Name', 'O/U', 'Strike', 'Odds', 'Median', 'Cat']
     # noinspection PyTypeChecker
-    printout.to_csv('/Users/arslanamir/PycharmProjects/nba_bets.csv', index=False)
+    append_df_excel(printout, file, date)
 
 
 def stat_checker(name, cat):
     sheet = pd.read_csv('/Users/arslanamir/PycharmProjects/nba.csv')
     sheet = sheet[sheet['Name'] == f'{name}']
     return sheet[f'{cat}'].median()
+
+
+date = '2021-12-23'
+fanduel_scraper(date)
 
