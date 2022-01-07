@@ -84,7 +84,6 @@ def fanduel_scraper(date, file='nba_bets'):
         EC.visibility_of_all_elements_located((By.PARTIAL_LINK_TEXT, "More wagers")))
     cats = {'Points': 'PTS', 'Rebounds': 'TRB', 'Assists': 'AST', 'Threes': '3P', 'Combos': 'Combos' }
     for cat in cats:
-        cat = 'Combos'
         for i in range(len(games)):
             try:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((games[i]))).click()
