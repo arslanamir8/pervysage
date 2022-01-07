@@ -1,5 +1,3 @@
-#!/bin/python3
-
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -49,7 +47,6 @@ def nba_scraper():
             try:
                 tdf = pd.read_html('https://www.basketball-reference.com' + stub)[-1]
                 tdf.columns = tdf.columns.get_level_values(-1)
-                tdf.drop(tdf.tail(1).index, inplace=True)
 
                 tdf = tdf.iloc[:, [6, 10, 11, 13, 14, 16, 17, 19, 20, 21, 22, 23, 24, 25, 27]]
                 tdf = tdf.drop(tdf[(tdf['FG'] == 'Inactive') | (tdf['FG'] == 'Did Not Play') |
@@ -81,70 +78,47 @@ def fanduel_scraper(date, file='nba_bets'):
     driver = webdriver.Chrome(service=s)
     url = 'https://sportsbook.fanduel.com/navigation/nba'
     driver.get(url)
-    games = WebDriverWait(driver, 5).until(EC.visibility_of_all_elements_located
-                                           ((By.PARTIAL_LINK_TEXT, "More wagers")))
-    pages = ['Points', 'Rebounds', 'Assists', 'Threes']
-    for page in pages:
+    games = WebDriverWait(driver, 5).until(
+        EC.visibility_of_all_elements_located((By.PARTIAL_LINK_TEXT, "More wagers")))
+    cats = {'Points': 'PTS', 'Rebounds': 'TRB', 'Assists': 'AST', 'Threes': '3P', 'Combos': 'Combos' }
+    for cat in cats:
+        cat = 'Combos'
         for i in range(len(games)):
-            WebDriverWait(driver, 5).until(EC.element_to_be_clickable((games[i]))).click()
             try:
-                WebDriverWait(driver, 5).until(EC.element_to_be_clickable
-                                                ((By.XPATH, f"//*[contains(text(),'{page}')]"))).click()
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((games[i]))).click()
+            except IndexError:
+                pass
+            try:
+                WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(),'{cat}')]"))).click()
             except TimeoutException:
                 driver.get(url)
                 games = WebDriverWait(driver, 5).until(
                     EC.presence_of_all_elements_located((By.PARTIAL_LINK_TEXT, "More wagers")))
                 continue
-            #props = WebDriverWait(driver, 5).until(
-                #EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'Player')]")))
             try:
-                WebDriverWait(driver, 1).until(EC.element_to_be_clickable
-                                               ((By.XPATH, "//*[contains(text(), 'Show more')]"))).click()
+                WebDriverWait(driver, 1).until(
+                    EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Show more')]"))).click()
             except TimeoutException:
                 pass
-            length = driver.find_elements(By.XPATH, "//span[text()='UNDER']//following::div[1]/*")
-            for y in range(1, len(length)+1):
-                name = WebDriverWait(driver, 20).until(
-                    EC.visibility_of_element_located
-                    ((By.XPATH, f"//span[text()='UNDER']//following::div[1]/div[{y}]//span")))
-                print(name.text, page)
-                count += 1
-                if page == 'Points':
-                    cat = 'PTS'
-                elif page == 'Rebounds':
-                    cat = 'TRB'
-                elif page == 'Assists':
-                    cat = 'AST'
-                else:
-                    cat = '3P'
-                try:
-                    parent_name = name.find_element(By.XPATH, './/parent::div')
-                    line_over = parent_name.find_element(By.XPATH, './/following-sibling::div/div/div/div/span')
-                    line_over_odds = line_over.find_element(By.XPATH, './/following-sibling::span').text
-                    line_under = parent_name.find_element(By.XPATH, './/following-sibling::div/div/div[2]/div/span')
-                    line_under_odds = line_under.find_element(By.XPATH, './/following-sibling::span').text
-                    print(line_over.text, line_over_odds, line_under.text, line_under_odds)
-                    if stat_checker(name.text, cat) < float(line_over.text[2:]) - 1:
-                        print(stat_checker(name.text, cat))
-                        print('UNDER PLACED', line_under_odds, stat_checker(name.text, cat))
-                        bets += 1
-                        picks[name.text + cat] = name.text, 'U', float(line_under.text[2:]), float(line_under_odds), \
-                                                 stat_checker(name.text, cat), cat
-                        #input("Press Enter to continue...")
-                    elif stat_checker(name.text, cat) > float(line_over.text[2:]) + 1:
-                        print(stat_checker(name.text, cat))
-                        print('OVER PLACED', line_over_odds)
-                        bets += 1
-                        picks[name.text + cat] = name.text, 'O', float(line_over.text[2:]), float(line_over_odds), \
-                                                 stat_checker(name.text, cat), cat
-                        #input("Press Enter to continue...")
-                    else:
-                        pass
+            if cat == 'Combos':
+                combos = {'Player Pts + Ast': ['PTS', 'AST'], 'Player Pts + Reb': ['PTS', 'TRB'],
+                          'Player Reb + Ast': ['TRB', 'AST'], 'Player Pts + Reb + Ast': ['PTS', 'TRB', 'AST']}
+                # Initial click to close first combo
+                WebDriverWait(driver, 2).until(
+                    EC.element_to_be_clickable((By.XPATH, "//span[contains(text(), 'Player Pts')]"))).click()
+                length_combo_props = driver.find_elements(By.XPATH, "//span[contains(text(), '+')]")
 
-                except NoSuchElementException:
-                    print('Locked')
-                    pass
-                print('##############################################')
+                for z in range(len(length_combo_props)):
+                    driver.execute_script("arguments[0].click();", length_combo_props[z])
+                    length_names = driver.find_elements(By.XPATH, "//span[text()='UNDER']//following::div[1]/*")
+                    specific_combos = combos[length_combo_props[z].text]
+                    player_looper(length_names, driver, cats, count, cat, picks, bets, specific_combos)
+                    driver.execute_script("arguments[0].click();", length_combo_props[z])
+
+            else:
+                length_names = driver.find_elements(By.XPATH, "//span[text()='UNDER']//following::div[1]/*")
+                player_looper(length_names, driver, cats, count, cat, picks, bets)
 
             driver.get(url)
             games = WebDriverWait(driver, 5).until(
@@ -162,6 +136,71 @@ def stat_checker(name, cat):
     return sheet[f'{cat}'].median()
 
 
-date = '2021-12-23'
-fanduel_scraper(date)
+def stat_checker_combos(name, specific_combos):
+    sheet = pd.read_csv('/Users/arslanamir/PycharmProjects/nba.csv')
+    sheet = sheet[sheet['Name'] == f'{name}']
+    sum = 0
+    for cat in specific_combos:
+        sum += sheet[cat].median()
+        print(cat, sheet[cat].median())
+    return sum
 
+
+def player_looper(length, driver, cats, count, cat, picks, bets, specific_combos=''):
+    for y in range(1, len(length) + 1):
+        name = WebDriverWait(driver, 20).until(
+            EC.visibility_of_element_located
+            ((By.XPATH, f"//span[text()='UNDER']//following::div[1]/div[{y}]//span")))
+        print(name.text, cat)
+        count += 1
+        try:
+            parent_name = name.find_element(By.XPATH, './/parent::div')
+            line_over = parent_name.find_element(By.XPATH, './/following-sibling::div/div/div/div/span')
+            line_over_odds = line_over.find_element(By.XPATH, './/following-sibling::span').text
+            line_under = parent_name.find_element(By.XPATH, './/following-sibling::div/div/div[2]/div/span')
+            line_under_odds = line_under.find_element(By.XPATH, './/following-sibling::span').text
+            print(line_over.text, line_over_odds, line_under.text, line_under_odds)
+            if specific_combos != '':
+                if stat_checker_combos(name.text, specific_combos) < float(line_over.text[2:]) - 1:
+                    print(stat_checker_combos(name.text, specific_combos))
+                    print('UNDER PLACED', line_under_odds, stat_checker_combos(name.text, specific_combos))
+                    bets += 1
+                    picks[name.text + cats[cat]] = name.text, 'U', float(line_under.text[2:]), float(line_under_odds), \
+                                                   stat_checker_combos(name.text, specific_combos), cats[cat]
+                    input("Press Enter to continue...")
+                elif stat_checker_combos(name.text, specific_combos) > float(line_over.text[2:]) + 1:
+                    print(stat_checker_combos(name.text, specific_combos))
+                    print('OVER PLACED', line_over_odds)
+                    bets += 1
+                    picks[name.text + cats[cat]] = name.text, 'O', float(line_over.text[2:]), float(line_over_odds), \
+                                                   stat_checker_combos(name.text, specific_combos), cats[cat]
+                    input("Press Enter to continue...")
+                else:
+                    pass
+            else:
+                if stat_checker(name.text, cats[cat]) < float(line_over.text[2:]) - 1:
+                    print(stat_checker(name.text, cats[cat]))
+                    print('UNDER PLACED', line_under_odds, stat_checker(name.text, cats[cat]))
+                    bets += 1
+                    picks[name.text + cats[cat]] = name.text, 'U', float(line_under.text[2:]), float(line_under_odds), \
+                                                   stat_checker(name.text, cats[cat]), cats[cat]
+                    input("Press Enter to continue...")
+                elif stat_checker(name.text, cats[cat]) > float(line_over.text[2:]) + 1:
+                    print(stat_checker(name.text, cats[cat]))
+                    print('OVER PLACED', line_over_odds)
+                    bets += 1
+                    picks[name.text + cats[cat]] = name.text, 'O', float(line_over.text[2:]), float(line_over_odds), \
+                                                   stat_checker(name.text, cats[cat]), cats[cat]
+                    input("Press Enter to continue...")
+                else:
+                    pass
+
+        except NoSuchElementException:
+            print('Locked')
+            pass
+        print('##############################################')
+
+
+date = '2022-1-07'
+nba_scraper()
+fanduel_scraper(date)
